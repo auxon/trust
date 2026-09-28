@@ -1,0 +1,22 @@
+name: trust-reconcile
+
+# Pulls spend snapshots from the shared agentpay D1 and reputation from
+# BSVBounties, then auto-binds linked wallets. The Cloudflare free plan's 5
+# cron slots are already used by other workers, so polling is driven from here
+# (same pattern as watchdog and proof).
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Reconcile trust signals
+        run: |
+          curl -fsS --max-time 60 -X POST "https://entangleit.com/trust/v1/reconcile" \
+            -H "content-type: application/json" \
+            -H "x-trust-internal: ${{ secrets.TRUST_INGEST_SECRET }}" \
+            -d '{"limit":200}'

@@ -1,0 +1,54 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "entangleit-trust",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "preview_urls": true,
+  "routes": [
+    { "pattern": "entangleit.com/trust", "zone_name": "entangleit.com" },
+    { "pattern": "entangleit.com/trust/*", "zone_name": "entangleit.com" }
+  ],
+  // Shared `entangleit` D1 (ap_ tables from agentpay, tr_ tables here).
+  "d1_databases": [
+    { "binding": "DB", "database_name": "entangleit", "database_id": "8f6c1ac7-ab0c-4133-a037-6ac1ed6afa6e" }
+  ],
+  // Shared METER KV (rate limits + replay guard + bind challenges).
+  "kv_namespaces": [{ "binding": "METER", "id": "5e067a7e5a504fc88c167c4a8db729ab" }],
+  "services": [
+    { "binding": "AGENTPAY", "service": "agentpay-api" },
+    { "binding": "BOUNTIES", "service": "bsv-bounties" },
+    { "binding": "ORACLE", "service": "decision-oracle" }
+  ],
+  "vars": {
+    "PUBLIC_BASE": "https://entangleit.com/trust",
+    "WORKERS_DEV_BASE": "https://entangleit-trust.richard-hein.workers.dev",
+    "PRICE_SATS": "5",
+    "PAY_TO": "1DHBH964yuvJnneuUe7EKFpVyJK1Vkz8Y4",
+    "ARC_URL": "https://arc.gorillapool.io/v1",
+    "AGENTPAY_PUBLIC_URL": "https://entangleit.com/api/agentpay",
+    "BOUNTIES_API_URL": "https://bsv-bounties.richard-hein.workers.dev",
+    "ORACLE_URL": "https://entangleit.com/oracle",
+    "FREE_DAILY_CALLS": "5",
+    "RATE_LIMIT_PER_MIN": "60",
+    "PROFILE_TTL_MS": "86400000",
+    "CACHE_TTL_MS": "300000",
+    "RATCHET_DAYS": "7",
+    "RECONCILE_LIMIT": "200",
+    "ATTESTATION_MIN_PAYMENTS": "10",
+    "ATTESTATION_MIN_SERVICES": "3",
+    "ATTESTATION_MIN_SPENT_CENTS": "50",
+    "ATTESTATION_MIN_AGE_DAYS": "7",
+    "REPUTATION_MIN_SCORE": "650"
+  },
+  // Secrets (wrangler secret put):
+  //   TRUST_KEY_JWK           private P-256 JWK that signs profiles (required to sign).
+  //   TRUST_INGEST_SECRET     shared secret for POST /v1/ingest + /v1/reconcile (x-trust-internal).
+  //   TRUST_ADMIN_TOKEN       operator bearer: skips the MCP free-tier gate (acceptance runs).
+  //   ORACLE_GATEWAY_KEY      optional; same value as decision-oracle's, lets the
+  //                           gray-zone Jev band call /decision without paying x402.
+  //   STRIPE_SECRET_KEY       optional billing (same Stripe account as the other connectors).
+  //   STRIPE_WEBHOOK_SECRET   signing secret for /trust/v1/billing/webhook.
+  "observability": { "enabled": true, "head_sampling_rate": 1 }
+}

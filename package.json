@@ -1,0 +1,25 @@
+{
+  "name": "entangleit-trust",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "EntangleIT Trust — one signed profile that turns verified history into terms. HTTP + MCP + x402 + badges.",
+  "scripts": {
+    "test": "node --test 'test/**/*.test.mjs'",
+    "typecheck": "tsc --noEmit",
+    "dev": "npx wrangler dev",
+    "schema": "npx wrangler d1 execute entangleit --remote --file=./schema.sql",
+    "deploy": "npx wrangler d1 execute entangleit --remote --file=./schema.sql && npx wrangler deploy",
+    "acceptance": "node scripts/acceptance.mjs",
+    "nightshift": "node scripts/nightshift.mjs"
+  },
+  "dependencies": {
+    "@bsv/sdk": "^2.4.1",
+    "hono": "^4.7.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.16.5",
+    "typescript": "^5.7.0",
+    "wrangler": "^4.65.0"
+  }
+}
