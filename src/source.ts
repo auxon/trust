@@ -145,14 +145,18 @@ export async function reconcile(
   // funding does not contaminate a wallet for life. Only UNMATCHED refunds
   // (positive refunds with no debit spend) are a red flag — money appearing
   // from nowhere. The gate sees net unmatched refunds, never below zero.
+  // Refunds cancel spends: a failed bounty funding does not contaminate a
+  // wallet for life, but an UNMATCHED refund is a red flag — money appearing
+  // from nowhere. The gate sees net refunds floored at zero (and never
+  // refunds above the spend it cancels).
   const refunds = await aggRows(
     env.DB,
     `SELECT wallet_id, MAX(0, COALESCE(SUM(refunded), 0) + COALESCE(SUM(debited), 0)) AS refunds
      FROM (
-       SELECT wallet_id, amount_cents AS refunded, 0 AS debited FROM ap_ledger
+       SELECT wallet_id, amount_cents AS refunded, 0 AS debited, 'r' AS t FROM ap_ledger
        WHERE kind = 'refund' AND amount_cents > 0
        UNION ALL
-       SELECT wallet_id, 0 AS refunded, amount_cents AS debited FROM ap_ledger
+       SELECT wallet_id, 0 AS refunded, amount_cents AS debited, 'd' AS t FROM ap_ledger
        WHERE kind = 'debit' AND amount_cents < 0
      ) GROUP BY wallet_id LIMIT ?`,
     limit,
