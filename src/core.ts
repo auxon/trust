@@ -276,7 +276,15 @@ export function spendVerified(metrics: SpendMetrics | null | undefined, nowMs = 
   }
   if (m.settledPayments < TRUST_ATTEST_MIN_PAYMENTS) return { eligible: false, reason: "too_few_payments" };
   if (m.distinctServices < TRUST_ATTEST_MIN_SERVICES) return { eligible: false, reason: "too_few_services" };
-  if (typeof m.distinctPayTo === "number" && m.distinctPayTo < TRUST_ATTEST_MIN_SERVICES) {
+  // Counterparty diversity is the max over services (off-chain settlement,
+// where the service IS the counterparty) and on-chain payees. Requiring
+// on-chain payees outright would exclude all off-chain rail spend — the
+// exact case tested here: 4 services, settled through agentpay, payTo null.
+  const counterparties = Math.max(
+    Number(m.distinctServices ?? 0),
+    typeof m.distinctPayTo === "number" ? m.distinctPayTo : 0,
+  );
+  if (counterparties < TRUST_ATTEST_MIN_SERVICES) {
     return { eligible: false, reason: "too_few_payees" };
   }
   if ((m.spentCents ?? 0) < TRUST_ATTEST_MIN_SPENT_CENTS) return { eligible: false, reason: "spend_too_low" };

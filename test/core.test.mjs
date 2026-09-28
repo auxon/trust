@@ -74,7 +74,19 @@ test("spend gate mirrors the shipped thresholds", () => {
   assert.deepEqual(spendVerified(goodSpend(), now), { eligible: true, reason: "trusted_spender" });
   assert.equal(spendVerified(goodSpend({ settledPayments: 9 }), now).reason, "too_few_payments");
   assert.equal(spendVerified(goodSpend({ distinctServices: 2 }), now).reason, "too_few_services");
-  assert.equal(spendVerified(goodSpend({ distinctPayTo: 2 }), now).reason, "too_few_payees");
+  assert.equal(spendVerified(goodSpend({ distinctServices: 2, distinctPayTo: 4 }), now).reason, "too_few_services");
+  assert.equal(spendVerified(goodSpend({ distinctServices: 2, distinctPayTo: 2 }), now).reason, "too_few_services");
+  assert.equal(spendVerified(goodSpend({ distinctServices: 3, distinctPayTo: 1 }), now).reason, "trusted_spender", "max(services, payees) rules");
+  // Off-chain rail spend: the service is the counterparty, so four services
+  // with no on-chain payee must still verify (the bug this guards).
+  assert.deepEqual(
+    spendVerified(goodSpend({ distinctPayTo: 1 }), now),
+    { eligible: true, reason: "trusted_spender" },
+  );
+  assert.deepEqual(
+    spendVerified({ ...goodSpend(), distinctPayTo: undefined }, now),
+    { eligible: true, reason: "trusted_spender" },
+  );
   assert.equal(spendVerified(goodSpend({ spentCents: 49 }), now).reason, "spend_too_low");
   assert.equal(spendVerified(goodSpend({ refundedCents: 1 }), now).reason, "has_refunds");
   const fresh = goodSpend({ firstPaymentAt: "2026-09-20T00:00:00.000Z" });
