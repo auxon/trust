@@ -168,6 +168,24 @@ test("internal callers can bind a key to an account with a signed challenge", as
   assert.equal(replay.status, 400);
 });
 
+test("operator bindings link a BSV key without a challenge", async () => {
+  const env = await makeEnv();
+  const key = "key:0379451028247f7ddba88ef272d47e2b0d72b47942d0b4081cb13a4a175340b135";
+  const bound = await call(env, "/v1/bind", jsonPost({ key, other: "wallet:apw_test" }, { "x-trust-internal": INTERNAL }));
+  assert.equal(bound.status, 200);
+  const body = await bound.json();
+  assert.equal(body.ok, true);
+  assert.equal(body.a, key);
+  assert.equal(body.proof, "operator");
+  // The subjects resolve together: the key's profile carries the wallet.
+  const profile = await (await call(env, `/v1/profile/${encodeURIComponent(key)}`)).json();
+  assert.ok(profile.profile.members.includes("wallet:apw_test"), "binding merges members");
+  // Same request without the secret is not a binding (no jwk/signature).
+  const env2 = await makeEnv();
+  const denied = await call(env2, "/v1/bind", jsonPost({ key, other: "wallet:apw_test" }));
+  assert.equal(denied.status, 400);
+});
+
 test("account bindings without the internal secret fail closed", async () => {
   const env = await makeEnv();
   const challenge = await (await call(env, "/v1/bind/challenge")).json();

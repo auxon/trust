@@ -368,6 +368,30 @@ async function doBind(
   if (!/^(wallet|account):[A-Za-z0-9:_.@-]{1,160}$/.test(other)) {
     return { ok: false, error: "other must be wallet:<id> or account:<n>" };
   }
+
+  // Operator-assisted binding: with the shared secret an operator may assert
+  // a known key linkage (e.g. a BSV-native secp256k1 key that cannot sign the
+  // P-256 challenge, or a wallet whose agentpay token is unavailable).
+  // Recorded as proof "operator" so it is auditable and never mistaken for a
+  // cryptographic binding; self-serve challenge bindings are unchanged.
+  const operatorKey = typeof args.key === "string" ? args.key.trim() : "";
+  if (opts.internal && operatorKey) {
+    if (!/^key:[A-Za-z0-9:_.@-]{1,160}$/.test(operatorKey)) {
+      return { ok: false, error: "key must be key:<subject>" };
+    }
+    const now = opts.now ?? Date.now();
+    await store.touchSubject(operatorKey, now);
+    await store.touchSubject(other, now);
+    await store.addBinding({
+      a: operatorKey,
+      b: other,
+      proof: "operator",
+      evidence: "x-trust-internal",
+      bound_at: now,
+    });
+    return { ok: true, a: operatorKey, b: other, proof: "operator" };
+  }
+
   const jwk = args.jwk as JsonWebKey | undefined;
   if (!jwk || jwk.kty !== "EC" || jwk.crv !== "P-256" || !jwk.x || !jwk.y) {
     return { ok: false, error: "jwk must be a public P-256 key" };
